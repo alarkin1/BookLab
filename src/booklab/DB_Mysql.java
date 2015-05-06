@@ -68,6 +68,34 @@ public class DB_Mysql {
         return list;
     }
     
+    public List<Map<String,Object>> getRecordsForOneCriteria(String tablename, String columnName, String searchTerm) throws Exception{
+        String sql = "SELECT * FROM " + tablename + " WHERE " + columnName + " = " + searchTerm + ";";
+        final List<Map<String,Object>> list = new ArrayList<>();
+        Map<String,Object> record;
+        Statement statement = null;
+        ResultSet rs = null;
+        ResultSetMetaData metadata = null;
+        
+        try{
+            statement = connection.createStatement();
+            rs = statement.executeQuery(sql);
+            metadata = rs.getMetaData();
+            final int fields = metadata.getColumnCount();
+            while(rs.next()){
+                record = new HashMap();
+                for(int i = 0; i<fields; i++){
+                    record.put(metadata.getColumnName(i), rs.getObject(i));
+                }
+                list.add(record);
+            }
+        }finally{
+            
+            closeConnection();
+        }
+        
+        return list;
+    }
+    
     public static void main(String[] args) throws Exception{
         DB_Mysql db = new DB_Mysql();
         
@@ -77,10 +105,10 @@ public class DB_Mysql {
         String password = "";
         
         db.openConnection(driver, url, username, password);
-        List<Map<String,Object>> records = db.getAllRecords("book");
+        //List<Map<String,Object>> records = db.getAllRecords("book");
+        List<Map<String,Object>> records2 = db.getRecordsForOneCriteria("book", "title", "'Advanced Java'");
         
-        
-        for(Map r: records){
+        for(Map r: records2){
             Set keySet = r.keySet();
             List headers = new ArrayList();
             headers.addAll(keySet);
