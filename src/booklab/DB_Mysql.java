@@ -12,111 +12,115 @@ import java.util.*;
  *
  * @author emmakordik
  */
-public class DB_Mysql {
+public class DB_Mysql implements DBAccesorStrategy {
+
     private Connection connection;
-    
-    
+
+    @Override
     public void openConnection(String driveName, String url, String username, String password)
             throws IllegalArgumentException, ClassNotFoundException, SQLException {
-       if(url == null || url.length() == 0){
-           throw new IllegalArgumentException();
-       }
-       
-       username = username==null ? "" : username;
-       password = password==null ? "" : password;
-       
-       Class.forName(driveName);
-       connection = DriverManager.getConnection(url, username, password);
+        if (url == null || url.length() == 0) {
+            throw new IllegalArgumentException();
+        }
+
+        username = username == null ? "" : username;
+        password = password == null ? "" : password;
+
+        Class.forName(driveName);
+        connection = DriverManager.getConnection(url, username, password);
     }
 
-
+    @Override
     public void closeConnection() throws SQLException {
         connection.close();
     }
 
-
-    public List<Map<String, Object>> getAllRecords(String tablename) throws SQLException, Exception {
+    @Override
+    public List<Map<String, Object>> getAllRecords(String tablename) throws SQLException {
         String sql = "SELECT * FROM " + tablename + ";";
-        final List<Map<String,Object>> list = new ArrayList<>();
-        Map<String,Object> record;
+        final List<Map<String, Object>> list = new ArrayList<>();
+        Map<String, Object> record;
         Statement statement = null;
         ResultSet rs = null;
         ResultSetMetaData metadata = null;
-        
-        try{
+
+        try {
             statement = connection.createStatement();
             rs = statement.executeQuery(sql);
             metadata = rs.getMetaData();
             final int fields = metadata.getColumnCount();
-            
-            while(rs.next()){
+
+            while (rs.next()) {
                 record = new LinkedHashMap();
-                for(int i = 1; i<fields; i++){
-                    try{
+                for (int i = 1; i < fields; i++) {
+                    try {
                         record.put(metadata.getColumnName(i), rs.getObject(i));
-                    }catch(NullPointerException ne){
-                        
+                    } catch (NullPointerException ne) {
+
                     }
                 }
-                
+
                 list.add(record);
             }
-        }finally{
+        } finally {
             closeConnection();
         }
-        
+
         return list;
     }
-    
-    public List<Map<String,Object>> getRecordsForOneCriteria(String tablename, String columnName, String searchTerm) throws Exception{
+
+    @Override
+    public List<Map<String, Object>> getRecordsForOneCriteria(String tablename, String columnName, String searchTerm) throws Exception {
         String sql = "SELECT * FROM " + tablename + " WHERE " + columnName + " = " + searchTerm + ";";
-        final List<Map<String,Object>> list = new ArrayList<>();
-        Map<String,Object> record;
+        final List<Map<String, Object>> list = new ArrayList<>();
+        Map<String, Object> record;
         Statement statement = null;
         ResultSet rs = null;
         ResultSetMetaData metadata = null;
-        
-        try{
+
+        try {
             statement = connection.createStatement();
             rs = statement.executeQuery(sql);
             metadata = rs.getMetaData();
             final int fields = metadata.getColumnCount();
-            while(rs.next()){
+            while (rs.next()) {
                 record = new HashMap();
-                for(int i = 0; i<fields; i++){
+                for (int i = 0; i < fields; i++) {
                     record.put(metadata.getColumnName(i), rs.getObject(i));
                 }
                 list.add(record);
             }
-        }finally{
-            
+        } finally {
+            statement.close();
             closeConnection();
         }
-        
+
         return list;
     }
-    
-    public static void main(String[] args) throws Exception{
-        DB_Mysql db = new DB_Mysql();
-        
+
+    public static void main(String[] args) throws Exception {
+        DBAccesorStrategy db = new DB_Mysql();
+
         String driver = "com.mysql.jdbc.Driver";
-        String url = "jdbc:mysql://localhost:3306/book_db";
+        String url = "jdbc:mysql://localhost:3306/books_db";
         String username = "root";
-        String password = "";
-        
+        String password = "admin";
+
         db.openConnection(driver, url, username, password);
-        //List<Map<String,Object>> records = db.getAllRecords("book");
-        List<Map<String,Object>> records2 = db.getRecordsForOneCriteria("book", "title", "'Advanced Java'");
-        
-        for(Map r: records2){
-            Set keySet = r.keySet();
-            List headers = new ArrayList();
-            headers.addAll(keySet);
-           
-            for(int i = 0; i<r.size(); i++){
-                System.out.println(headers.get(i) + " " + r.get(headers.get(i)));
-            }
-            System.out.println("");
+        db.deleteRecordViaUniqueIntColumn("book", 1, "book_id");
+    }
+
+    @Override
+    public final void deleteRecordViaUniqueIntColumn(String tablename, int uniqueIntVal, String columnToCompare) throws Exception {
+        String sqlQuery = "DELETE FROM " + tablename + " WHERE " + columnToCompare + " = " + uniqueIntVal + ";";
+        System.out.println(sqlQuery);
+        Statement statement = null;
+        try {
+            statement = connection.createStatement();
+            statement.execute(sqlQuery);
+        } finally {
+            statement.close();
+            closeConnection();
         }
     }
 }
